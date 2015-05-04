@@ -107,26 +107,29 @@ ppopp (mode, debug, showFile, userArgs, compilerName) ((inFile, inDir):files) =
        let envPath = ["-I" ++ cilkStubPath] ++ ["-I" ++ pochoirLibPath]
 -}
        let envPath = ["-I" ++ pochoirLibPath]
-       let iccPPFile = inDir ++ getPPFile inFile
+       let filename = inDir ++ getPPFile inFile
+       
+       let fullFilePath = inDir ++ inFile
+       
        let iccPPArgs = if debug == False
-             then iccPPFlags ++ envPath ++ [inFile]
-             else iccDebugPPFlags ++ envPath ++ [inFile] 
+             then iccPPFlags ++ envPath ++  ["-o", inDir ++ getMidFile inFile] ++ [fullFilePath]
+             else iccDebugPPFlags ++ envPath ++  ["-o", inDir ++ getMidFile inFile] ++ [fullFilePath] 
        -- a pass of icc preprocessing
        if compilerName /= "g++"
           then putStrLn (icc ++ " " ++ intercalate " " iccPPArgs)
-          else putStrLn (gcc ++ " " ++ intercalate " " (gccFlags ++ gccPPFlags ++ ["-o", getMidFile inFile] ++ envPath ++ [inFile]))
+          else putStrLn (gcc ++ " " ++ intercalate " " (gccFlags ++ gccPPFlags ++ ["-o", inDir ++ getMidFile inFile] ++ envPath ++ [fullFilePath]))
 
        -- a pass of pochoir compilation
        --let gccParams = gccFlags ++ envPath ++ [inFile]
        if compilerName /= "g++"
           then rawSystem icc iccPPArgs
-          else rawSystem gcc (gccFlags ++ gccPPFlags ++ ["-o", getMidFile inFile] ++ envPath ++ [inFile])
+          else rawSystem gcc (gccFlags ++ gccPPFlags ++ ["-o", inDir ++ getMidFile inFile] ++ envPath ++ [fullFilePath])
 
        whilst (mode /= PDebug) $ do
            let outFile = rename "_pochoir" inFile
-           inh <- openFile iccPPFile ReadMode
+           inh <- openFile filename ReadMode
            outh <- openFile outFile WriteMode
-           putStrLn ("pochoir " ++ show mode ++ " " ++ iccPPFile)
+           putStrLn ("pochoir " ++ show mode ++ " " ++ filename)
            pProcess mode inh outh
            hClose inh
            hClose outh
